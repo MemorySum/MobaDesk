@@ -68,7 +68,10 @@ jobs:
 
       - name: Build installer
         shell: pwsh
-        run: ./installer/build-installer.ps1 -Version '${{ steps.version.outputs.version }}'
+        run: |
+          $script = Join-Path $env:GITHUB_WORKSPACE 'installer\build-installer.ps1'
+          if (-not (Test-Path $script)) { throw "Cannot find $script" }
+          & "$script" -Version '${{ steps.version.outputs.version }}'
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

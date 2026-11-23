@@ -40,13 +40,28 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$root = Split-Path -Parent $PSScriptRoot
-$project = Join-Path $root 'src\MobaDesk\MobaDesk.csproj'
+$repoRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
+$project = Join-Path $repoRoot 'src\MobaDesk\MobaDesk.csproj'
+
+# On CI the script normally lives inside the checkout, but fall back to the
+# workspace variable if it was copied or invoked from a different location.
+if (-not (Test-Path $project) -and $env:GITHUB_WORKSPACE) {
+    $workspaceProject = Join-Path $env:GITHUB_WORKSPACE 'src\MobaDesk\MobaDesk.csproj'
+    if (Test-Path $workspaceProject) {
+        $repoRoot = [System.IO.Path]::GetFullPath($env:GITHUB_WORKSPACE)
+        $project = $workspaceProject
+    }
+}
+
 $iss = Join-Path $PSScriptRoot 'MobaDesk.iss'
 
-if (-not (Test-Path $project)) { throw "Cannot find $project" }
-if (-not (Test-Path $iss)) { throw "Cannot find $iss" }
-Write-Host "Repository root: $root"
+if (-not (Test-Path $project)) {
+    throw "Cannot find project '$project'. Repo root guessed as '$repoRoot' (PSScriptRoot='$PSScriptRoot')."
+}
+if (-not (Test-Path $iss)) {
+    throw "Cannot find installer script '$iss' (PSScriptRoot='$PSScriptRoot')."
+}
+Write-Host "Repository root: $repoRoot"
 Write-Host "Build script: $PSCommandPath"
 
 if (-not $Version) {
@@ -55,7 +70,7 @@ if (-not $Version) {
     if (-not $Version) { $Version = '1.0.0' }
 }
 
-if (-not $PublishDir) { $PublishDir = Join-Path $root 'publish\win-x64' }
+if (-not $PublishDir) { $PublishDir = Join-Path $repoRoot 'publish\win-x64' }
 if (-not $OutputDir) { $OutputDir = Join-Path $PSScriptRoot 'output' }
 $PublishDir = [System.IO.Path]::GetFullPath($PublishDir)
 $OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
@@ -104,10 +119,13 @@ if (-not $iscc) {
 }
 
 if (-not $SkipPublish) {
-    $publishScript = Join-Path $root 'publish.ps1'
-    if (-not (Test-Path $publishScript)) { throw "Cannot find publish script: $publishScript" }
+    $publishScript = Join-Path $repoRoot 'publish.ps1'
+    if (-not (Test-Path $publishScript)) {
+        throw "Cannot find publish script '$publishScript' (repo root: '$repoRoot')."
+    }
     Write-Host 'Publishing MobaDesk (self-contained, slim)...' -ForegroundColor Cyan
-    & $publishScript
+    # Call operator with an explicit quoted path: handles spaces in the workspace path.
+    & "$publishScript"
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -117,7 +135,7 @@ if (-not (Test-Path (Join-Path $PublishDir 'MobaDesk.exe'))) {
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 Write-Host "Compiling installer (version $Version)..." -ForegroundColor Cyan
-& $iscc "/DAppVersion=$Version" "/DAppPublishDir=$PublishDir" "/DOutputDir=$OutputDir" $iss
+& "$iscc" "/DAppVersion=$Version" "/DAppPublishDir=$PublishDir" "/DOutputDir=$OutputDir" "$iss"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $setupName = "MobaDesk-Setup-$Version.exe"

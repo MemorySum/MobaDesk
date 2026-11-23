@@ -913,3 +913,17 @@ CI 首次运行发现并修复的问题：
   - `publish.ps1` 被解析成 `C:\Program Files\publish.ps1`（CI 报错 `The term ... is not recognized`）；
   - 本地复测时安装包版本变成 `7`（输出 `MobaDesk-Setup-7.exe`）。
   - 修复：循环变量改名 `$installRoot` / `$innoVersion`，并重新验证输出为 `MobaDesk-Setup-1.0.1.exe`、`version.json` 的 version/url 正确。
+
+进一步加固（CI 路径问题）：
+
+- `build-installer.ps1` 不再使用易冲突的 `$root`，改为 `$repoRoot`（`[IO.Path]::GetFullPath(Split-Path -Parent $PSScriptRoot)`）；
+  - 若 `$PSScriptRoot` 下找不到 `src\MobaDesk\MobaDesk.csproj`，自动回退到 `$env:GITHUB_WORKSPACE`；
+  - `publish.ps1` 与 `ISCC.exe` 均使用调用运算符并显式加引号：`& "$publishScript"`、`& "$iscc" ...`，避免含空格路径被拆分；
+  - 找不到 `publish.ps1` 时抛出包含脚本路径、仓库根目录与 `PSScriptRoot` 的明确错误。
+- 工作流 `Build installer` 步骤改为：
+  ```powershell
+  $script = Join-Path $env:GITHUB_WORKSPACE 'installer\build-installer.ps1'
+  if (-not (Test-Path $script)) { throw "Cannot find $script" }
+  & "$script" -Version '<version>'
+  ```
+- 本地以 PowerShell 7 按上述方式完整执行成功，输出 `MobaDesk-Setup-1.0.1.exe`。
