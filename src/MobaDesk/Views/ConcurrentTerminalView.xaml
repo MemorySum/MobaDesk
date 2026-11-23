@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="MobaDesk.Views.ConcurrentTerminalView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:MobaDesk.Controls">
+
+    <Grid x:Name="LayoutGrid" Padding="6" RowSpacing="6" ColumnSpacing="0">
+        <controls:VerticalResizeHandle x:Name="ColumnSplitter" Visibility="Collapsed" />
+        <controls:HorizontalResizeHandle x:Name="RowSplitter" Visibility="Collapsed" />
+    </Grid>
+</UserControl>

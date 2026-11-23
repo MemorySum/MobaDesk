@@ -1,0 +1,17 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/MobaDesk/MobaDesk.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MobaDesk.ServiceProbe/MobaDesk.ServiceProbe.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+</Solution>

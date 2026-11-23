@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="MobaDesk.Dialogs.ProfileDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:MobaDesk.Ui">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="560">
+        <StackPanel Spacing="12" Width="470">
+            <InfoBar x:Name="ErrorBar" Severity="Error" IsOpen="False" IsClosable="False" />
+
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="NameBox" loc:Loc.Header="Common.Name"
+                         loc:Loc.Placeholder="Profile.NamePlaceholder" />
+                <TextBox x:Name="GroupBox" Grid.Column="1" loc:Loc.Header="Common.Group"
+                         loc:Loc.Placeholder="Profile.GroupPlaceholder" />
+            </Grid>
+
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="ProtocolCombo" loc:Loc.Header="Profile.ProtocolHeader"
+                          HorizontalAlignment="Stretch">
+                    <ComboBoxItem loc:Loc.Key="Protocol.SSH" />
+                    <ComboBoxItem loc:Loc.Key="Protocol.SFTP" />
+                    <ComboBoxItem loc:Loc.Key="Protocol.FTP" />
+                    <ComboBoxItem loc:Loc.Key="Protocol.RDP" />
+                </ComboBox>
+                <ComboBox x:Name="ColorCombo" Grid.Column="1" loc:Loc.Header="Profile.ColorHeader"
+                          HorizontalAlignment="Stretch">
+                    <ComboBoxItem loc:Loc.Key="Color.Sky" Tag="#38BDF8" />
+                    <ComboBoxItem loc:Loc.Key="Color.Purple" Tag="#A78BFA" />
+                    <ComboBoxItem loc:Loc.Key="Color.Amber" Tag="#FBBF24" />
+                    <ComboBoxItem loc:Loc.Key="Color.Green" Tag="#34D399" />
+                    <ComboBoxItem loc:Loc.Key="Color.Red" Tag="#F87171" />
+                    <ComboBoxItem loc:Loc.Key="Color.Cyan" Tag="#22D3EE" />
+                </ComboBox>
+            </Grid>
+
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="HostBox" loc:Loc.Header="Common.Host"
+                         loc:Loc.Placeholder="Profile.HostPlaceholder" />
+                <NumberBox x:Name="PortBox" Grid.Column="1" loc:Loc.Header="Common.Port" Minimum="1"
+                           Maximum="65535" SpinButtonPlacementMode="Hidden" />
+            </Grid>
+
+            <TextBox x:Name="UserBox" loc:Loc.Header="Common.Username" PlaceholderText="root" />
+
+            <ComboBox x:Name="AuthCombo" loc:Loc.Header="Profile.AuthHeader" HorizontalAlignment="Stretch">
+                <ComboBoxItem loc:Loc.Key="Auth.Password" />
+                <ComboBoxItem loc:Loc.Key="Auth.PrivateKey" />
+            </ComboBox>
+
+            <PasswordBox x:Name="PasswordInput" loc:Loc.Header="Common.Password"
+                         loc:Loc.Placeholder="Profile.PasswordPlaceholder" />
+            <CheckBox x:Name="SavePasswordCheck" loc:Loc.Key="Profile.Remember" IsChecked="True" />
+
+            <StackPanel x:Name="KeyPanel" Spacing="8">
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="KeyPathBox" loc:Loc.Header="Profile.KeyHeader"
+                             loc:Loc.Placeholder="Profile.KeyPlaceholder" />
+                    <Button x:Name="BrowseKeyButton" Grid.Column="1" loc:Loc.Key="Common.Browse"
+                            VerticalAlignment="Bottom" Click="OnBrowseKeyClick" />
+                </Grid>
+                <PasswordBox x:Name="PassphraseInput" loc:Loc.Header="Profile.PassphraseHeader"
+                             loc:Loc.Placeholder="Profile.PassphrasePlaceholder" />
+            </StackPanel>
+
+            <CheckBox x:Name="UseTlsCheck" loc:Loc.Key="Profile.UseTls" />
+
+            <StackPanel x:Name="RdpPanel" Spacing="10">
+                <TextBlock loc:Loc.Key="Profile.RdpOptions" FontWeight="SemiBold" />
+                <TextBox x:Name="DomainBox" loc:Loc.Header="Common.Domain" />
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <NumberBox x:Name="RdpWidthBox" loc:Loc.Header="Profile.Width" Minimum="640"
+                               Maximum="7680" SpinButtonPlacementMode="Hidden" />
+                    <NumberBox x:Name="RdpHeightBox" Grid.Column="1" loc:Loc.Header="Profile.Height"
+                               Minimum="480" Maximum="4320" SpinButtonPlacementMode="Hidden" />
+                </Grid>
+                <CheckBox x:Name="FullScreenCheck" loc:Loc.Key="Profile.FullScreen" />
+                <CheckBox x:Name="RedirectDrivesCheck" loc:Loc.Key="Profile.RedirectDrives" />
+                <CheckBox x:Name="RedirectClipboardCheck" loc:Loc.Key="Profile.RedirectClipboard" />
+            </StackPanel>
+
+            <TextBlock loc:Loc.Key="Profile.Disclaimer" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>
+
+

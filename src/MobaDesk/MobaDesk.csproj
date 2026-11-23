@@ -1,0 +1,121 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>MobaDesk</RootNamespace>
+    <AssemblyName>MobaDesk</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <Platform>x64</Platform>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Version>1.0.1</Version>
+    <Product>MobaDesk</Product>
+    <Description>MobaDesk - unlimited SSH, SFTP, FTP, RDP and server monitoring client for Windows.</Description>
+    <AssemblyTitle>MobaDesk</AssemblyTitle>
+    <Company>MobaDesk</Company>
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
+
+  <!--
+    Optional Native AOT. WinUI 3 payloads are not officially AOT-supported yet and the ILC step
+    needs the MSVC linker (Desktop development with C++ workload). Opt in with:
+      dotnet publish -c Release -p:MobaDeskNativeAot=true
+  -->
+  <PropertyGroup Condition="'$(MobaDeskNativeAot)' == 'true'">
+    <PublishAot>true</PublishAot>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+    <StackTraceSupport>false</StackTraceSupport>
+    <EventSourceSupport>false</EventSourceSupport>
+    <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <IsAotCompatible>true</IsAotCompatible>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+
+  <!-- Optional ReadyToRun: precompiled IL, no JIT at startup. Faster start, larger output. -->
+  <PropertyGroup Condition="'$(MobaDeskReadyToRun)' == 'true'">
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRunComposite>false</PublishReadyToRunComposite>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="SSH.NET" Version="2026.0.1" />
+    <PackageReference Include="FluentFTP" Version="55.1.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Resources\**\*.json" CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- dotnet publish omits the compiled WinUI resource index for unpackaged apps; copy it explicitly. -->
+  <Target Name="CopyPriToPublish" AfterTargets="Publish" Condition="Exists('$(TargetDir)$(AssemblyName).pri')">
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" />
+  </Target>
+
+  <!--
+    Slim payload for the self-contained publish. Windows App SDK 1.8 ships the Windows AI stack
+    (ONNX Runtime, DirectML, Windows.AI/Workloads/Widgets projections) plus ~86 locale resource
+    folders that MobaDesk never uses. Dropping them saves ~50 MB without changing behaviour.
+    Disable with -p:MobaDeskSlimPayload=false.
+  -->
+  <Target Name="SlimPublishPayload" AfterTargets="Publish" Condition="'$(MobaDeskSlimPayload)' != 'false'">
+    <CallTarget Targets="_DeleteSlimPayload" />
+  </Target>
+
+  <!-- Native AOT copies the .pdb after Publish, so prune once more once symbols are in place. -->
+  <Target Name="SlimPublishPayloadAfterAot" AfterTargets="_CopyAotSymbols"
+          Condition="'$(PublishAot)' == 'true' and '$(MobaDeskSlimPayload)' != 'false'">
+    <CallTarget Targets="_DeleteSlimPayload" />
+  </Target>
+
+  <Target Name="_DeleteSlimPayload">
+    <ItemGroup>
+      <!-- symbols -->
+      <SlimPayload Include="$(PublishDir)*.pdb" />
+
+      <!-- Windows AI / local model stack -->
+      <SlimPayload Include="$(PublishDir)onnxruntime.dll" />
+      <SlimPayload Include="$(PublishDir)onnxruntime_providers_shared.dll" />
+      <SlimPayload Include="$(PublishDir)DirectML.dll" />
+      <SlimPayload Include="$(PublishDir)Microsoft.ML.OnnxRuntime.dll" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.AI.*" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.Vision*" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.Internal.Vision.winmd" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.SemanticSearch.winmd" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.Workloads*" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.Private.Workloads.SessionManager.winmd" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.PrivateCommon.winmd" />
+      <SlimPayload Include="$(PublishDir)NpuDetect*" />
+      <SlimPayload Include="$(PublishDir)workloads*.json" />
+
+      <!-- Widgets / push notifications are not used by MobaDesk -->
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.Widgets*" />
+      <SlimPayload Include="$(PublishDir)Microsoft.Windows.PushNotifications*" />
+      <SlimPayload Include="$(PublishDir)PushNotificationsLongRunningTask.ProxyStub.dll" />
+
+      <!-- locale resources: keep the two UI languages MobaDesk supports -->
+      <SlimLocale Include="$(PublishDir)*\*.mui" />
+      <SlimLocale Remove="$(PublishDir)en-us\*.mui" />
+      <SlimLocale Remove="$(PublishDir)zh-CN\*.mui" />
+    </ItemGroup>
+
+    <Delete Files="@(SlimPayload)" />
+    <Delete Files="@(SlimLocale)" />
+    <RemoveDir Directories="@(SlimLocale->'%(RootDir)%(Directory)')" />
+  </Target>
+</Project>

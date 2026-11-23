@@ -1,0 +1,17 @@
+bin/
+obj/
+publish/
+installer/output/
+_altbuild/
+_foldertest/
+_uitestdata/
+_uilangtest/
+_pubtest/
+_probe/
+_shot*.png
+_uia*.ps1
+_monitor.sh
+_clean-dev.sh
+.vs/
+*.user
+*.binlog

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MobaDesk Editor</title>
+    <link rel="stylesheet" href="codemirror.min.css" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #0b0f16;
+            overflow: hidden;
+        }
+
+        #host {
+            height: 100%;
+        }
+
+        .CodeMirror {
+            height: 100%;
+            font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            background: #0b0f16;
+            color: #d7dde8;
+        }
+
+        .CodeMirror-gutters {
+            background: #0b0f16;
+            border-right: 1px solid rgba(148, 163, 184, 0.16);
+        }
+
+        .CodeMirror-linenumber {
+            color: #475569;
+            padding: 0 8px 0 8px;
+        }
+
+        .CodeMirror-lines {
+            padding: 8px 0 24px 0;
+        }
+
+        .CodeMirror-cursor {
+            border-left: 2px solid #38bdf8;
+        }
+
+        .CodeMirror-selected,
+        .CodeMirror-focused .CodeMirror-selected {
+            background: rgba(56, 189, 248, 0.22);
+        }
+
+        .CodeMirror-line::selection,
+        .CodeMirror-line > span::selection,
+        .CodeMirror-line > span > span::selection {
+            background: rgba(56, 189, 248, 0.28);
+        }
+
+        .CodeMirror-activeline-background {
+            background: rgba(148, 163, 184, 0.07);
+        }
+
+        .CodeMirror-matchingbracket {
+            color: #fbbf24 !important;
+            background: rgba(251, 191, 36, 0.16);
+        }
+
+        .CodeMirror-nonmatchingbracket {
+            color: #f87171 !important;
+        }
+
+        /* MobaDesk dark syntax palette */
+        .cm-s-mobadesk .cm-comment {
+            color: #5c6773;
+            font-style: italic;
+        }
+
+        .cm-s-mobadesk .cm-keyword {
+            color: #c792ea;
+        }
+
+        .cm-s-mobadesk .cm-atom,
+        .cm-s-mobadesk .cm-number {
+            color: #f78c6c;
+        }
+
+        .cm-s-mobadesk .cm-def,
+        .cm-s-mobadesk .cm-builtin,
+        .cm-s-mobadesk .cm-property {
+            color: #82aaff;
+        }
+
+        .cm-s-mobadesk .cm-variable,
+        .cm-s-mobadesk .cm-variable-2 {
+            color: #d7dde8;
+        }
+
+        .cm-s-mobadesk .cm-variable-3,
+        .cm-s-mobadesk .cm-type,
+        .cm-s-mobadesk .cm-qualifier,
+        .cm-s-mobadesk .cm-attribute,
+        .cm-s-mobadesk .cm-meta {
+            color: #ffcb6b;
+        }
+
+        .cm-s-mobadesk .cm-string,
+        .cm-s-mobadesk .cm-string-2 {
+            color: #c3e88d;
+        }
+
+        .cm-s-mobadesk .cm-operator,
+        .cm-s-mobadesk .cm-bracket {
+            color: #89ddff;
+        }
+
+        .cm-s-mobadesk .cm-tag {
+            color: #f07178;
+        }
+
+        .cm-s-mobadesk .cm-header {
+            color: #82aaff;
+            font-weight: 600;
+        }
+
+        .cm-s-mobadesk .cm-quote {
+            color: #5c6773;
+        }
+
+        .cm-s-mobadesk .cm-link {
+            color: #89ddff;
+            text-decoration: underline;
+        }
+
+        .cm-s-mobadesk .cm-hr {
+            color: #5c6773;
+        }
+
+        .cm-s-mobadesk .cm-error {
+            color: #ff5370;
+        }
+    </style>
+</head>
+<body>
+<div id="host"></div>
+
+<script src="codemirror.min.js"></script>
+<script src="mode/xml/xml.min.js"></script>
+<script src="mode/javascript/javascript.min.js"></script>
+<script src="mode/css/css.min.js"></script>
+<script src="mode/clike/clike.min.js"></script>
+<script src="mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="mode/php/php.min.js"></script>
+<script src="mode/shell/shell.min.js"></script>
+<script src="mode/python/python.min.js"></script>
+<script src="mode/markdown/markdown.min.js"></script>
+<script src="mode/yaml/yaml.min.js"></script>
+<script src="mode/sql/sql.min.js"></script>
+<script src="mode/go/go.min.js"></script>
+<script src="mode/rust/rust.min.js"></script>
+<script src="mode/ruby/ruby.min.js"></script>
+<script src="mode/perl/perl.min.js"></script>
+<script src="mode/powershell/powershell.min.js"></script>
+<script src="mode/dockerfile/dockerfile.min.js"></script>
+<script src="mode/properties/properties.min.js"></script>
+<script src="mode/toml/toml.min.js"></script>
+<script src="mode/lua/lua.min.js"></script>
+<script src="mode/swift/swift.min.js"></script>
+<script src="mode/sass/sass.min.js"></script>
+<script src="mode/cmake/cmake.min.js"></script>
+<script src="mode/nginx/nginx.min.js"></script>
+<script src="mode/diff/diff.min.js"></script>
+<script src="mode/vb/vb.min.js"></script>
+<script src="mode/r/r.min.js"></script>
+<script src="mode/protobuf/protobuf.min.js"></script>
+<script src="mode/dart/dart.min.js"></script>
+<script src="addon/edit/matchbrackets.min.js"></script>
+<script src="addon/edit/closebrackets.min.js"></script>
+<script src="addon/selection/active-line.min.js"></script>
+
+<script>
+    (function () {
+        'use strict';
+
+        let cm = null;
+        let suppressChange = false;
+
+        function post(message) {
+            try {
+                window.chrome.webview.postMessage(JSON.stringify(message));
+            } catch (e) {
+                // Host bridge is not available yet.
+            }
+        }
+
+        function createEditor(mode, readOnly, fontFamily, fontSize) {
+            const options = {
+                value: '',
+                mode: mode || null,
+                lineNumbers: true,
+                lineWrapping: false,
+                indentUnit: 4,
+                tabSize: 4,
+                indentWithTabs: false,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                styleActiveLine: true,
+                theme: 'mobadesk',
+                readOnly: !!readOnly,
+                scrollbarStyle: 'native',
+                viewportMargin: 40
+            };
+            if (fontFamily) {
+                options['font-family'] = fontFamily;
+            }
+            if (fontSize) {
+                options['font-size'] = fontSize + 'px';
+            }
+
+            cm = CodeMirror(document.getElementById('host'), options);
+            cm.on('change', function () {
+                if (!suppressChange) {
+                    post({ type: 'change' });
+                }
+            });
+            cm.setCursor({ line: 0, ch: 0 });
+            return cm;
+        }
+
+        function setContent(text, mode, readOnly, fontFamily, fontSize) {
+            if (!cm) {
+                createEditor(mode, readOnly, fontFamily, fontSize);
+            } else {
+                cm.setOption('mode', mode || null);
+                if (fontFamily) {
+                    cm.getWrapperElement().style.fontFamily = fontFamily;
+                }
+                if (fontSize) {
+                    cm.getWrapperElement().style.fontSize = fontSize + 'px';
+                }
+            }
+
+            suppressChange = true;
+            cm.setValue(typeof text === 'string' ? text : '');
+            suppressChange = false;
+            cm.clearHistory();
+            cm.setOption('readOnly', !!readOnly);
+            cm.setCursor({ line: 0, ch: 0 });
+            cm.scrollTo(0, 0);
+            cm.refresh();
+            if (!readOnly) {
+                cm.focus();
+            }
+        }
+
+        window.editorHost = {
+            setContent: setContent,
+            getValue: function () {
+                return cm ? cm.getValue() : '';
+            },
+            setReadOnly: function (readOnly) {
+                if (cm) {
+                    cm.setOption('readOnly', !!readOnly);
+                }
+            },
+            applyFont: function (fontFamily, fontSize) {
+                if (!cm) {
+                    return;
+                }
+                if (fontFamily) {
+                    cm.getWrapperElement().style.fontFamily = fontFamily;
+                }
+                if (fontSize) {
+                    cm.getWrapperElement().style.fontSize = fontSize + 'px';
+                }
+                cm.refresh();
+            },
+            focus: function () {
+                if (cm) {
+                    cm.focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', function (event) {
+            if (!(event.ctrlKey || event.metaKey)) {
+                return;
+            }
+            const key = (event.key || '').toLowerCase();
+            if (key === 's') {
+                event.preventDefault();
+                event.stopPropagation();
+                post({ type: 'save' });
+            }
+        }, true);
+
+        post({ type: 'ready' });
+    })();
+</script>
+</body>
+</html>

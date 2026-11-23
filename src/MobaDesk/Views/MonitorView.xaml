@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="MobaDesk.Views.MonitorView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:MobaDesk.Controls"
+    xmlns:models="using:MobaDesk.Models"
+    xmlns:loc="using:MobaDesk.Ui">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Padding="12,7" ColumnSpacing="8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource WarningBrush}" />
+                <TextBlock x:Name="StatusLabel" loc:Loc.Key="Monitor.Title" FontSize="12"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="HostLabel" FontSize="11" VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                <Button x:Name="RefreshButton" Style="{StaticResource ToolbarButtonStyle}" Click="OnRefreshClick"
+                        loc:Loc.ToolTip="Monitor.RefreshTooltip">
+                    <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                </Button>
+                <Button x:Name="PauseButton" Style="{StaticResource ToolbarButtonStyle}" Click="OnPauseClick"
+                        loc:Loc.ToolTip="Monitor.PauseTooltip">
+                    <FontIcon x:Name="PauseIcon" Glyph="&#xE769;" FontSize="13" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <InfoBar x:Name="ErrorBar" Grid.Row="1" Margin="10,4" Severity="Warning" IsOpen="False"
+                 IsClosable="True" />
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10" Padding="12">
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="4">
+                        <Grid>
+                            <TextBlock loc:Loc.Key="Monitor.Cpu" Style="{StaticResource SectionTitleStyle}" />
+                            <TextBlock x:Name="CpuValueText" Text="—" HorizontalAlignment="Right"
+                                       FontSize="20" FontWeight="SemiBold" />
+                        </Grid>
+                        <controls:Sparkline x:Name="CpuChart" Height="58" Color="#38BDF8" Maximum="100" />
+                        <TextBlock x:Name="CpuLoadText" FontSize="11" loc:Loc.Key="Monitor.LoadEmpty"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="6">
+                        <Grid>
+                            <TextBlock loc:Loc.Key="Monitor.Memory" Style="{StaticResource SectionTitleStyle}" />
+                            <TextBlock x:Name="MemValueText" Text="—" HorizontalAlignment="Right"
+                                       FontSize="16" FontWeight="SemiBold" />
+                        </Grid>
+                        <ProgressBar x:Name="MemBar" Maximum="100" Height="6" />
+                        <Grid>
+                            <TextBlock x:Name="MemDetailText" FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="SwapText" FontSize="11" HorizontalAlignment="Right"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="6">
+                        <TextBlock loc:Loc.Key="Monitor.Network" Style="{StaticResource SectionTitleStyle}" />
+                        <Grid ColumnSpacing="14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock loc:Loc.Key="Monitor.Down" FontSize="10"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="NetInText" Text="—" FontSize="13" FontWeight="SemiBold" />
+                                <controls:Sparkline x:Name="NetInChart" Height="40" Color="#38BDF8" AutoScale="True" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock loc:Loc.Key="Monitor.Up" FontSize="10"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="NetOutText" Text="—" FontSize="13" FontWeight="SemiBold" />
+                                <controls:Sparkline x:Name="NetOutChart" Height="40" Color="#34D399" AutoScale="True" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock x:Name="NetTotalText" FontSize="10"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="6">
+                        <TextBlock loc:Loc.Key="Monitor.System" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock x:Name="SystemText" Text="—" FontSize="12" TextWrapping="Wrap" />
+                        <Grid>
+                            <TextBlock x:Name="UptimeText" FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="RttText" FontSize="11" HorizontalAlignment="Right"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock loc:Loc.Key="Monitor.Disks" Style="{StaticResource SectionTitleStyle}" />
+                        <ItemsControl x:Name="DiskList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:DiskUsage">
+                                    <StackPanel Spacing="2" Margin="0,2">
+                                        <Grid>
+                                            <TextBlock Text="{x:Bind MountPoint}" FontSize="12" />
+                                            <TextBlock Text="{x:Bind PercentText}" FontSize="11"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </Grid>
+                                        <ProgressBar Value="{x:Bind UsedPercent}" Maximum="100" Height="5" />
+                                        <TextBlock Text="{x:Bind DetailText}" FontSize="10"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="6">
+                        <TextBlock loc:Loc.Key="Monitor.Processes" Style="{StaticResource SectionTitleStyle}" />
+                        <Grid ColumnSpacing="8" Padding="2,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="46" />
+                                <ColumnDefinition Width="46" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock loc:Loc.Key="Monitor.Process" FontSize="9"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                            <TextBlock Grid.Column="1" loc:Loc.Key="Monitor.CpuShort" FontSize="9"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                            <TextBlock Grid.Column="2" loc:Loc.Key="Monitor.MemShort" FontSize="9"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                        </Grid>
+                        <ItemsControl x:Name="ProcessList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:ProcessInfo">
+                                    <Grid ColumnSpacing="8" Padding="2,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="46" />
+                                            <ColumnDefinition Width="46" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind Name}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind CpuText}" FontSize="11"
+                                                   HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="2" Text="{x:Bind MemText}" FontSize="11"
+                                                   HorizontalAlignment="Right"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="UpdatedText" loc:Loc.Key="Monitor.Waiting" FontSize="10"
+                           HorizontalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

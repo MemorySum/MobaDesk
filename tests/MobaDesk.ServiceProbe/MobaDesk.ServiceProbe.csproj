@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>MobaDesk.ServiceProbe</RootNamespace>
+    <Platforms>x64</Platforms>
+    <Platform>x64</Platform>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CS8618;CS8602;CS8604</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
+    <PackageReference Include="SSH.NET" Version="2026.0.1" />
+    <PackageReference Include="FluentFTP" Version="55.1.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\MobaDesk\Models\ConnectionProfile.cs" Link="Shared\ConnectionProfile.cs" />
+    <Compile Include="..\..\src\MobaDesk\Models\AppSettings.cs" Link="Shared\AppSettings.cs" />
+    <Compile Include="..\..\src\MobaDesk\Models\FileIconPalette.cs" Link="Shared\FileIconPalette.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\JsonStore.cs" Link="Shared\JsonStore.cs" />
+    <Compile Include="..\..\src\MobaDesk\Models\MobaDeskJsonContext.cs" Link="Shared\MobaDeskJsonContext.cs" />
+    <Compile Include="..\..\src\MobaDesk\Models\UpdateManifest.cs" Link="Shared\UpdateManifest.cs" />
+    <Compile Include="..\..\src\MobaDesk\Models\RemoteEntry.cs" Link="Shared\RemoteEntry.cs" />
+    <Compile Include="..\..\src\MobaDesk\Models\ServerMetrics.cs" Link="Shared\ServerMetrics.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\AppPaths.cs" Link="Shared\AppPaths.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\CredentialProtector.cs" Link="Shared\CredentialProtector.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\Localization.cs" Link="Shared\Localization.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\SshAuth.cs" Link="Shared\SshAuth.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\SshSession.cs" Link="Shared\SshSession.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\MonitorService.cs" Link="Shared\MonitorService.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\FileSystems\IRemoteFileSystem.cs" Link="Shared\IRemoteFileSystem.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\FileSystems\SftpRemoteFileSystem.cs" Link="Shared\SftpRemoteFileSystem.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\FileSystems\FtpRemoteFileSystem.cs" Link="Shared\FtpRemoteFileSystem.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\RdpLauncher.cs" Link="Shared\RdpLauncher.cs" />
+    <Compile Include="..\..\src\MobaDesk\Services\UpdateService.cs" Link="Shared\UpdateService.cs" />
+  </ItemGroup>
+</Project>

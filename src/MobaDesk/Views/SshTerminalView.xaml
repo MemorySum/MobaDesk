@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="MobaDesk.Views.SshTerminalView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:MobaDesk.Ui"
+    xmlns:controls="using:MobaDesk.Controls">
+
+    <Grid Background="#0B0F16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Padding="10,5" ColumnSpacing="8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource WarningBrush}" />
+                <TextBlock x:Name="StatusLabel" loc:Loc.Key="Ssh.Connecting" FontSize="12"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="EndpointLabel" FontSize="11" VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <!-- Per-session opt-out for broadcast (concurrent) input. -->
+                <CheckBox x:Name="BroadcastCheck" IsChecked="True" MinWidth="0" MinHeight="26"
+                          Padding="0" Margin="0,0,4,0" FontSize="11"
+                          VerticalAlignment="Center" loc:Loc.ToolTip="Ssh.BroadcastMemberToolTip">
+                    <TextBlock loc:Loc.Key="Ssh.BroadcastMember" FontSize="11"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                </CheckBox>
+                <ToggleButton x:Name="SftpButton" loc:Loc.Key="Ssh.Sftp" Padding="9,3" MinWidth="0"
+                              Height="28" FontSize="11" loc:Loc.ToolTip="Ssh.SftpPanel"
+                              Click="OnSftpToggleClick" />
+                <ToggleButton x:Name="MonitorButton" loc:Loc.Key="Ssh.Monitor" Padding="9,3" MinWidth="0"
+                              Height="28" FontSize="11" loc:Loc.ToolTip="Ssh.MonitorPanel"
+                              Click="OnMonitorToggleClick" />
+                <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnClearClick"
+                        loc:Loc.ToolTip="Ssh.Clear">
+                    <FontIcon Glyph="&#xE894;" FontSize="13" />
+                </Button>
+                <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnReconnectClick"
+                        loc:Loc.ToolTip="Common.Reconnect">
+                    <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Grid x:Name="TerminalArea" Background="#0B0F16"
+                  PointerPressed="OnTerminalAreaPointerPressed" Tapped="OnTerminalAreaTapped">
+                <Grid.ContextFlyout>
+                    <MenuFlyout x:Name="TerminalMenu" Opening="OnTerminalMenuOpening">
+                        <MenuFlyoutItem x:Name="CopyMenuItem" loc:Loc.Key="Terminal.Copy"
+                                        Click="OnCopyMenuItemClick" KeyboardAcceleratorTextOverride="Ctrl+Shift+C">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE8C8;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="PasteMenuItem" loc:Loc.Key="Terminal.Paste"
+                                        Click="OnPasteMenuItemClick" KeyboardAcceleratorTextOverride="Ctrl+Shift+V">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE77F;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="FindMenuItem" loc:Loc.Key="Terminal.Find"
+                                        Click="OnFindMenuItemClick" KeyboardAcceleratorTextOverride="Ctrl+Shift+F">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE721;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="ClearMenuItem" loc:Loc.Key="Terminal.Clear"
+                                        Click="OnClearClick" KeyboardAcceleratorTextOverride="Ctrl+Shift+L">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE894;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem x:Name="ReconnectMenuItem" loc:Loc.Key="Terminal.Reconnect"
+                                        Click="OnReconnectClick">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE72C;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutSubItem x:Name="SelectTextMenuItem" loc:Loc.Key="Terminal.SelectText">
+                            <MenuFlyoutItem x:Name="SelectAllMenuItem" loc:Loc.Key="Terminal.SelectAll"
+                                            Click="OnSelectAllClick" />
+                            <MenuFlyoutItem x:Name="ClearSelectionMenuItem" loc:Loc.Key="Terminal.ClearSelection"
+                                            Click="OnClearSelectionClick" />
+                        </MenuFlyoutSubItem>
+                        <MenuFlyoutSubItem x:Name="LayoutMenuItem" loc:Loc.Key="Terminal.Layout">
+                            <MenuFlyoutItem x:Name="SplitHorizontalMenuItem" loc:Loc.Key="Terminal.SplitHorizontal"
+                                            Click="OnSplitHorizontalClick" />
+                            <MenuFlyoutItem x:Name="SplitVerticalMenuItem" loc:Loc.Key="Terminal.SplitVertical"
+                                            Click="OnSplitVerticalClick" />
+                        </MenuFlyoutSubItem>
+                        <MenuFlyoutSubItem x:Name="MoreMenuItem" loc:Loc.Key="Terminal.More">
+                            <MenuFlyoutItem x:Name="SftpMenuItem" loc:Loc.Key="Terminal.OpenSftp"
+                                            Click="OnSftpToggleClick" />
+                            <MenuFlyoutItem x:Name="MonitorMenuItem" loc:Loc.Key="Terminal.OpenMonitor"
+                                            Click="OnMonitorToggleClick" />
+                        </MenuFlyoutSubItem>
+                    </MenuFlyout>
+                </Grid.ContextFlyout>
+
+                <WebView2 x:Name="TerminalWeb" DefaultBackgroundColor="#0B0F16" />
+
+                <Border x:Name="BusyOverlay" Background="#E60B0F16">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12"
+                                MaxWidth="440" Padding="24">
+                        <ProgressRing x:Name="BusyRing" Width="34" Height="34" IsActive="True" />
+                        <TextBlock x:Name="BusyTitle" loc:Loc.Key="Ssh.BusyTitle" FontSize="15"
+                                   FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="BusyDetail" Text="" FontSize="12" TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Button x:Name="RetryButton" loc:Loc.Key="Common.Reconnect"
+                                Style="{StaticResource AccentButtonStyle}" Visibility="Collapsed"
+                                Click="OnReconnectClick" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="FindBar" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="0,8,16,0" Padding="5" CornerRadius="6" Visibility="Collapsed"
+                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBox x:Name="FindBox" Width="190" Height="28" FontSize="12" CornerRadius="4"
+                                 loc:Loc.Placeholder="Terminal.FindPlaceholder"
+                                 TextChanged="OnFindTextChanged" KeyDown="OnFindBoxKeyDown" />
+                        <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnFindPreviousClick"
+                                loc:Loc.ToolTip="Terminal.FindPrevious">
+                            <FontIcon Glyph="&#xE74A;" FontSize="11" />
+                        </Button>
+                        <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnFindNextClick"
+                                loc:Loc.ToolTip="Terminal.FindNext">
+                            <FontIcon Glyph="&#xE74B;" FontSize="11" />
+                        </Button>
+                        <Button Style="{StaticResource ToolbarButtonStyle}" Click="OnFindCloseClick"
+                                loc:Loc.ToolTip="Common.Close">
+                            <FontIcon Glyph="&#xE711;" FontSize="11" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <controls:VerticalResizeHandle x:Name="SidePanelSplitter" Grid.Column="1"
+                                           Visibility="Collapsed" />
+
+            <Border x:Name="SidePanel" Grid.Column="2" Width="440" Visibility="Collapsed"
+                    BorderThickness="1,0,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Padding="10,6" ColumnSpacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <ToggleButton x:Name="SftpToggle" loc:Loc.Key="Ssh.SftpPanel" Padding="10,3"
+                                          Height="28" FontSize="11" Click="OnSftpToggleClick" />
+                            <ToggleButton x:Name="MonitorToggle" loc:Loc.Key="Ssh.MonitorPanel" Padding="10,3"
+                                          Height="28" FontSize="11" Click="OnMonitorToggleClick" />
+                        </StackPanel>
+                        <Button Grid.Column="1" HorizontalAlignment="Right" Style="{StaticResource ToolbarButtonStyle}"
+                                Click="OnCloseSidePanelClick" loc:Loc.ToolTip="Ssh.ClosePanel">
+                            <FontIcon Glyph="&#xE711;" FontSize="12" />
+                        </Button>
+                    </Grid>
+
+                    <ContentControl x:Name="SideContent" Grid.Row="1" HorizontalContentAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

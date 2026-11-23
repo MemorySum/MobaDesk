@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MobaDesk Terminal</title>
+    <link rel="stylesheet" href="xterm/xterm.css" />
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0b0f16;
+        }
+
+        #terminal {
+            position: absolute;
+            inset: 0;
+            padding: 6px 2px 2px 8px;
+            box-sizing: border-box;
+        }
+
+        .xterm .xterm-viewport {
+            scrollbar-width: thin;
+            background-color: #0b0f16 !important;
+        }
+
+        .xterm .xterm-screen {
+            will-change: transform;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal"></div>
+
+    <script src="xterm/xterm.js"></script>
+    <script src="xterm/addon-fit.js"></script>
+    <script>
+        (function () {
+            'use strict';
+
+            const host = document.getElementById('terminal');
+            const term = new Terminal({
+                fontFamily: 'Cascadia Mono, Consolas, "Courier New", monospace',
+                fontSize: 14,
+                lineHeight: 1.15,
+                cursorBlink: true,
+                cursorStyle: 'bar',
+                scrollback: 8000,
+                allowProposedApi: true,
+                theme: {
+                    background: '#0b0f16',
+                    foreground: '#d7dde8',
+                    cursor: '#38bdf8',
+                    cursorAccent: '#0b0f16',
+                    selectionBackground: '#264f78',
+                    black: '#111827',
+                    red: '#f87171',
+                    green: '#34d399',
+                    yellow: '#fbbf24',
+                    blue: '#60a5fa',
+                    magenta: '#c084fc',
+                    cyan: '#22d3ee',
+                    white: '#e5e7eb',
+                    brightBlack: '#6b7280',
+                    brightRed: '#fca5a5',
+                    brightGreen: '#6ee7b7',
+                    brightYellow: '#fde68a',
+                    brightBlue: '#93c5fd',
+                    brightMagenta: '#d8b4fe',
+                    brightCyan: '#67e8f9',
+                    brightWhite: '#f9fafb'
+                }
+            });
+
+            const fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            term.open(host);
+
+            window.copyOnSelect = false;
+
+            function post(message) {
+                try {
+                    window.chrome.webview.postMessage(JSON.stringify(message));
+                } catch (e) {
+                    // Host bridge is not available yet.
+                }
+            }
+
+            function bytesToBase64(bytes) {
+                let binary = '';
+                const chunk = 0x8000;
+                for (let i = 0; i < bytes.length; i += chunk) {
+                    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+                }
+                return btoa(binary);
+            }
+
+            function base64ToBytes(base64) {
+                const binary = atob(base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes;
+            }
+
+            const encoder = new TextEncoder();
+
+            term.onData(function (data) {
+                post({ type: 'input', data: bytesToBase64(encoder.encode(data)) });
+            });
+
+            term.onBinary(function (data) {
+                const bytes = new Uint8Array(data.length);
+                for (let i = 0; i < data.length; i++) {
+                    bytes[i] = data.charCodeAt(i) & 0xff;
+                }
+                post({ type: 'input', data: bytesToBase64(bytes) });
+            });
+
+            term.attachCustomKeyEventHandler(function (event) {
+                if (event.type !== 'keydown') {
+                    return true;
+                }
+
+                if (event.ctrlKey && event.shiftKey) {
+                    if (event.code === 'KeyC') {
+                        const selection = term.getSelection();
+                        if (selection) {
+                            post({ type: 'copy', text: selection });
+                        }
+                        return false;
+                    }
+                    if (event.code === 'KeyV') {
+                        post({ type: 'paste' });
+                        return false;
+                    }
+                    if (event.code === 'KeyF') {
+                        post({ type: 'find' });
+                        return false;
+                    }
+                    if (event.code === 'KeyL') {
+                        post({ type: 'clear' });
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            term.onSelectionChange(function () {
+                const selection = term.getSelection();
+                post({ type: 'selection', hasSelection: !!(selection && selection.length) });
+                if (!window.copyOnSelect) {
+                    return;
+                }
+                if (selection && selection.length > 0) {
+                    post({ type: 'copy', text: selection });
+                }
+            });
+
+            host.addEventListener('contextmenu', function (event) {
+                event.preventDefault();
+                post({ type: 'contextmenu', x: event.clientX, y: event.clientY });
+            });
+
+            const minFontSize = 9;
+            const maxFontSize = 32;
+
+            function currentFontSize() {
+                return term.options.fontSize || 14;
+            }
+
+            function applyFontSize(size) {
+                const clamped = Math.max(minFontSize, Math.min(maxFontSize, Math.round(size)));
+                if (clamped === currentFontSize()) {
+                    return clamped;
+                }
+
+                term.options.fontSize = clamped;
+                fitNow(true);
+                post({ type: 'zoom', fontSize: clamped });
+                return clamped;
+            }
+
+            function zoomBy(delta) {
+                return applyFontSize(currentFontSize() + delta);
+            }
+
+            // Ctrl + wheel zooms the terminal font instead of the page.
+            let zoomAccumulator = 0;
+            let zoomAccumulatorTimer = null;
+            const zoomStep = 100;
+
+            host.addEventListener('wheel', function (event) {
+                if (!event.ctrlKey) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                zoomAccumulator += event.deltaY;
+                clearTimeout(zoomAccumulatorTimer);
+                zoomAccumulatorTimer = setTimeout(function () { zoomAccumulator = 0; }, 160);
+
+                let steps = 0;
+                while (zoomAccumulator >= zoomStep && steps < 3) {
+                    zoomAccumulator -= zoomStep;
+                    zoomBy(-1);
+                    steps++;
+                }
+
+                while (zoomAccumulator <= -zoomStep && steps < 3) {
+                    zoomAccumulator += zoomStep;
+                    zoomBy(1);
+                    steps++;
+                }
+            }, { passive: false, capture: true });
+
+            let fitTimer = null;
+            function fitNow(notify) {
+                try {
+                    fitAddon.fit();
+                } catch (e) {
+                    // Layout may not be ready.
+                }
+                if (notify !== false) {
+                    post({ type: 'resize', cols: term.cols, rows: term.rows });
+                }
+            }
+
+            window.addEventListener('resize', function () {
+                clearTimeout(fitTimer);
+                fitTimer = setTimeout(function () { fitNow(true); }, 80);
+            });
+
+            if (window.ResizeObserver) {
+                new ResizeObserver(function () {
+                    clearTimeout(fitTimer);
+                    fitTimer = setTimeout(function () { fitNow(true); }, 80);
+                }).observe(host);
+            }
+
+            let lastFind = { query: '', row: -1 };
+
+            function findNext(query, backwards) {
+                const needle = (query || '').toLowerCase();
+                if (!needle) {
+                    return false;
+                }
+
+                const buffer = term.buffer.active;
+                const total = buffer.length;
+                if (total === 0) {
+                    return false;
+                }
+
+                let start = lastFind.query === needle && lastFind.row >= 0
+                    ? lastFind.row + (backwards ? -1 : 1)
+                    : buffer.baseY + buffer.cursorY;
+
+                for (let offset = 0; offset < total; offset++) {
+                    let row = backwards ? start - offset : start + offset;
+                    row = ((row % total) + total) % total;
+                    const line = buffer.getLine(row);
+                    if (!line) {
+                        continue;
+                    }
+
+                    const text = line.translateToString(true);
+                    const index = text.toLowerCase().indexOf(needle);
+                    if (index >= 0) {
+                        term.select(index, row, needle.length);
+                        term.scrollToLine(row);
+                        lastFind = { query: needle, row: row };
+                        return true;
+                    }
+                }
+
+                lastFind = { query: needle, row: -1 };
+                return false;
+            }
+
+            window.term = {
+                write: function (base64) {
+                    term.write(base64ToBytes(base64));
+                },
+                writeText: function (text) {
+                    term.write(text);
+                },
+                writeln: function (text) {
+                    term.writeln(text);
+                },
+                clear: function () {
+                    term.clear();
+                },
+                focus: function () {
+                    term.focus();
+                },
+                selectAll: function () {
+                    term.selectAll();
+                },
+                clearSelection: function () {
+                    term.clearSelection();
+                },
+                getSelection: function () {
+                    return term.getSelection();
+                },
+                findNext: function (query, backwards) {
+                    return findNext(query, !!backwards);
+                },
+                zoom: function (delta) {
+                    return zoomBy(delta || 0);
+                },
+                resetZoom: function () {
+                    return applyFontSize(14);
+                },
+                getFontSize: function () {
+                    return currentFontSize();
+                },
+                configure: function (options) {
+                    if (!options) {
+                        return;
+                    }
+                    if (options.fontSize) {
+                        term.options.fontSize = options.fontSize;
+                    }
+                    if (options.fontFamily) {
+                        term.options.fontFamily = options.fontFamily;
+                    }
+                    if (options.scrollback) {
+                        term.options.scrollback = options.scrollback;
+                    }
+                    if (options.copyOnSelect !== undefined) {
+                        window.copyOnSelect = !!options.copyOnSelect;
+                    }
+                    setTimeout(function () { fitNow(true); }, 30);
+                }
+            };
+
+            setTimeout(function () {
+                fitNow(false);
+                term.focus();
+                post({ type: 'ready', cols: term.cols, rows: term.rows });
+            }, 80);
+        })();
+    </script>
+</body>
+</html>
