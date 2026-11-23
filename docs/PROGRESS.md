@@ -889,3 +889,20 @@ MobaDesk 完全用不到。新增 `SlimPublishPayload` MSBuild 目标（AfterTar
   - 拖动时终端与命令栏实时重新分配空间，输入框、工具按钮随之重排。
 - 注意：`DragMoved` 是普通 CLR 事件，XAML 属性绑定不会真正挂接，必须在构造函数中 `BroadcastSplitter.DragMoved += OnBroadcastSplitterDragMoved`（与 `ConcurrentTerminalView` / `SshTerminalView` 中其它拖动条一致）。
 - 验证：在真实 SSH 标签页中开启并发输入，拖动命令栏上方横线向上移动 150px，命令栏高度由 72 增至约 226，终端相应缩短；反向拖动可缩小，且不会超过最小/最大限制；构建 0 警告 0 错误。
+
+---
+
+## 24. 2026-11-23 增补：GitHub Actions 自动打包
+
+- 新增 `.github/workflows/build-installer.yml`：
+  - 触发：推送 `v*` tag，或在 Actions 页面手动 `workflow_dispatch`；
+  - 运行环境：`windows-latest`，`actions/setup-dotnet` 安装 .NET 8；
+  - 安装 **Inno Setup 6.7.4**：直接从官方 GitHub Release 下载，校验 Authenticode 签名后静默安装（不依赖 Chocolatey 包版本）;
+  - 版本解析：读取 `src/MobaDesk/MobaDesk.csproj` 的 `<Version>`；tag 发版时校验 tag（去掉前缀 `v`）与 csproj 版本一致，不一致直接失败；
+  - 执行 `installer/build-installer.ps1 -Version <version>`（内部先 `publish.ps1` 再编译安装包，并生成 `version.json`）；
+  - 产物：`MobaDesk-Setup-<version>.exe` 与 `version.json` 上传为 workflow artifact；
+  - tag 构建额外使用 `softprops/action-gh-release@v2` 创建 GitHub Release，上传两个文件并生成 release notes，正文包含固定的更新源地址：
+    `https://github.com/<owner>/<repo>/releases/latest/download/version.json`。
+- `build-installer.ps1` 的 ISCC 查找扩展为 Inno Setup 6 / 7 的 Program Files、`%LOCALAPPDATA%\Programs`、临时目录，并增加对任意 `Inno Setup *` 目录的回退搜索。
+- 更新清单中的 `url` 使用相对文件名，更新器会基于清单 URL 解析，因此可直接配合 GitHub Release 的 `latest/download/version.json` 使用。
+- 说明：工作流不执行 ServiceProbe（需要真实 SSH/FTP 服务器）；发版前仍建议本地运行 `dotnet build` 与安装包静默安装/卸载验证。

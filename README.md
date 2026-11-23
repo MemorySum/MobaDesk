@@ -126,6 +126,35 @@ winget install --id Microsoft.VisualStudio.2022.BuildTools -e
 
 `url` 可以是绝对地址，也可以相对于 `version.json` 所在目录。缺少有效 SHA-256 的更新会被拒绝安装。
 
+### GitHub Actions 自动打包
+
+仓库包含 `.github/workflows/build-installer.yml`，在 GitHub 上自动构建安装包：
+
+- **打 tag 发版**：推送形如 `v1.0.1` 的 tag 后，工作流会在 `windows-latest` 上安装 .NET 8 与 Inno Setup 6，
+  运行 `installer/build-installer.ps1`，自动创建 GitHub Release 并上传：
+  - `MobaDesk-Setup-<version>.exe`
+  - `version.json`
+- **手动运行**：在 Actions 页面选择 `Build Installer` → `Run workflow`，产物保存在该次运行的 Artifacts 中。
+- 版本号必须与 `src/MobaDesk/MobaDesk.csproj` 的 `<Version>` 一致；不一致时工作流会直接失败。
+- GitHub Release 的更新源地址固定为：
+
+  ```
+  https://github.com/<owner>/<repo>/releases/latest/download/version.json
+  ```
+
+  其中 `version.json` 的 `url` 使用相对文件名，更新器会解析到同一个 Release 的安装包。
+
+发版流程：
+
+```powershell
+# 1. 修改 src/MobaDesk/MobaDesk.csproj 中的 <Version>
+# 2. 提交并推送
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+> 安装包未做代码签名；下载页可提醒用户首次运行时的 SmartScreen 提示。
+
 ### 便携模式 / 多实例
 
 默认数据目录为 `%LOCALAPPDATA%\MobaDesk`。设置环境变量 `MOBADESK_DATA_DIR` 可切换到隔离的数据目录（例如放在 U 盘）：

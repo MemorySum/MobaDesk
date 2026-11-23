@@ -60,11 +60,35 @@ $OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 
 # Locate the Inno Setup compiler.
 $isccCandidates = @()
-if (${env:ProgramFiles(x86)}) { $isccCandidates += (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe') }
-if ($env:ProgramFiles) { $isccCandidates += (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe') }
-if ($env:LOCALAPPDATA) { $isccCandidates += (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe') }
-if ($env:TEMP) { $isccCandidates += (Join-Path $env:TEMP 'InnoSetup6\ISCC.exe') }
+foreach ($root in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
+    if ($root) {
+        foreach ($version in @('6', '7')) {
+            $isccCandidates += (Join-Path $root "Inno Setup $version\ISCC.exe")
+        }
+    }
+}
+if ($env:LOCALAPPDATA) {
+    foreach ($version in @('6', '7')) {
+        $isccCandidates += (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup $version\ISCC.exe")
+    }
+}
+if ($env:TEMP) {
+    foreach ($version in @('6', '7')) {
+        $isccCandidates += (Join-Path $env:TEMP "InnoSetup$version\ISCC.exe")
+    }
+}
 $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $iscc) {
+    # Fallback: any "Inno Setup *" folder (covers future major versions / chocolatey layouts).
+    foreach ($root in @(${env:ProgramFiles(x86)}, $env:ProgramFiles, (Join-Path $env:LOCALAPPDATA 'Programs'))) {
+        if (-not $root -or -not (Test-Path $root)) { continue }
+        $found = Get-ChildItem -Path $root -Directory -Filter 'Inno Setup *' -ErrorAction SilentlyContinue |
+            ForEach-Object { Join-Path $_.FullName 'ISCC.exe' } |
+            Where-Object { Test-Path $_ } |
+            Select-Object -First 1
+        if ($found) { $iscc = $found; break }
+    }
+}
 if (-not $iscc) {
     $onPath = Get-Command ISCC.exe -ErrorAction SilentlyContinue
     if ($onPath) { $iscc = $onPath.Source }
