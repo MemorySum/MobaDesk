@@ -9,10 +9,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: installer-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   installer:
     runs-on: windows-latest
