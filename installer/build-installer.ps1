@@ -46,6 +46,8 @@ $iss = Join-Path $PSScriptRoot 'MobaDesk.iss'
 
 if (-not (Test-Path $project)) { throw "Cannot find $project" }
 if (-not (Test-Path $iss)) { throw "Cannot find $iss" }
+Write-Host "Repository root: $root"
+Write-Host "Build script: $PSCommandPath"
 
 if (-not $Version) {
     [xml]$projectXml = Get-Content $project -Encoding UTF8
@@ -102,8 +104,10 @@ if (-not $iscc) {
 }
 
 if (-not $SkipPublish) {
+    $publishScript = Join-Path $root 'publish.ps1'
+    if (-not (Test-Path $publishScript)) { throw "Cannot find publish script: $publishScript" }
     Write-Host 'Publishing MobaDesk (self-contained, slim)...' -ForegroundColor Cyan
-    & (Join-Path $root 'publish.ps1')
+    & $publishScript
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 

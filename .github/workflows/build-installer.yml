@@ -27,6 +27,12 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Show build context
+        shell: pwsh
+        run: |
+          git log -1 --oneline
+          Write-Host "ref=$env:GITHUB_REF sha=$env:GITHUB_SHA"
+
       - name: Install Inno Setup 6
         shell: pwsh
         run: |
