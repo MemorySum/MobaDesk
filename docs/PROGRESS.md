@@ -906,3 +906,10 @@ MobaDesk 完全用不到。新增 `SlimPublishPayload` MSBuild 目标（AfterTar
 - `build-installer.ps1` 的 ISCC 查找扩展为 Inno Setup 6 / 7 的 Program Files、`%LOCALAPPDATA%\Programs`、临时目录，并增加对任意 `Inno Setup *` 目录的回退搜索。
 - 更新清单中的 `url` 使用相对文件名，更新器会基于清单 URL 解析，因此可直接配合 GitHub Release 的 `latest/download/version.json` 使用。
 - 说明：工作流不执行 ServiceProbe（需要真实 SSH/FTP 服务器）；发版前仍建议本地运行 `dotnet build` 与安装包静默安装/卸载验证。
+
+CI 首次运行发现并修复的问题：
+
+- `build-installer.ps1` 的 ISCC 查找循环使用了 `$root` 与 `$version` 作为循环变量。PowerShell 变量名不区分大小写，循环覆盖了脚本顶部的仓库根目录 `$root` 和参数 `$Version`，导致：
+  - `publish.ps1` 被解析成 `C:\Program Files\publish.ps1`（CI 报错 `The term ... is not recognized`）；
+  - 本地复测时安装包版本变成 `7`（输出 `MobaDesk-Setup-7.exe`）。
+  - 修复：循环变量改名 `$installRoot` / `$innoVersion`，并重新验证输出为 `MobaDesk-Setup-1.0.1.exe`、`version.json` 的 version/url 正确。

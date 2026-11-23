@@ -60,29 +60,29 @@ $OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 
 # Locate the Inno Setup compiler.
 $isccCandidates = @()
-foreach ($root in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
-    if ($root) {
-        foreach ($version in @('6', '7')) {
-            $isccCandidates += (Join-Path $root "Inno Setup $version\ISCC.exe")
+foreach ($installRoot in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
+    if ($installRoot) {
+        foreach ($innoVersion in @('6', '7')) {
+            $isccCandidates += (Join-Path $installRoot "Inno Setup $innoVersion\ISCC.exe")
         }
     }
 }
 if ($env:LOCALAPPDATA) {
-    foreach ($version in @('6', '7')) {
-        $isccCandidates += (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup $version\ISCC.exe")
+    foreach ($innoVersion in @('6', '7')) {
+        $isccCandidates += (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup $innoVersion\ISCC.exe")
     }
 }
 if ($env:TEMP) {
-    foreach ($version in @('6', '7')) {
-        $isccCandidates += (Join-Path $env:TEMP "InnoSetup$version\ISCC.exe")
+    foreach ($innoVersion in @('6', '7')) {
+        $isccCandidates += (Join-Path $env:TEMP "InnoSetup$innoVersion\ISCC.exe")
     }
 }
 $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) {
     # Fallback: any "Inno Setup *" folder (covers future major versions / chocolatey layouts).
-    foreach ($root in @(${env:ProgramFiles(x86)}, $env:ProgramFiles, (Join-Path $env:LOCALAPPDATA 'Programs'))) {
-        if (-not $root -or -not (Test-Path $root)) { continue }
-        $found = Get-ChildItem -Path $root -Directory -Filter 'Inno Setup *' -ErrorAction SilentlyContinue |
+    foreach ($installRoot in @(${env:ProgramFiles(x86)}, $env:ProgramFiles, (Join-Path $env:LOCALAPPDATA 'Programs'))) {
+        if (-not $installRoot -or -not (Test-Path $installRoot)) { continue }
+        $found = Get-ChildItem -Path $installRoot -Directory -Filter 'Inno Setup *' -ErrorAction SilentlyContinue |
             ForEach-Object { Join-Path $_.FullName 'ISCC.exe' } |
             Where-Object { Test-Path $_ } |
             Select-Object -First 1
