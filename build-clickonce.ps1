@@ -72,7 +72,7 @@ while ($parts.Count -lt 4) { $parts += '0' }
 $clickOnceVersion = ($parts[0..3] -join '.')
 
 $commonArgs = @(
-    "`"$project`"",
+    $project,
     "/p:Configuration=$Configuration",
     "/p:Platform=$Platform",
     "/p:SelfContained=true",
