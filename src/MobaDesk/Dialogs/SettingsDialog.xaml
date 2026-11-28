@@ -249,10 +249,7 @@
                                 <TextBlock loc:Loc.Key="Update.Section" FontWeight="SemiBold" FontSize="13" />
                             </StackPanel>
 
-                            <TextBlock loc:Loc.Key="Update.FeedHeader" FontSize="12" />
-                            <TextBox x:Name="UpdateFeedBox" FontSize="12"
-                                     loc:Loc.Placeholder="Update.FeedPlaceholder" />
-                            <TextBlock loc:Loc.Key="Update.FeedHint" FontSize="11" TextWrapping="Wrap"
+                            <TextBlock loc:Loc.Key="Update.SourceHint" FontSize="11" TextWrapping="Wrap"
                                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
 
                             <CheckBox x:Name="AutoUpdateCheck" loc:Loc.Key="Update.AutoCheck" />

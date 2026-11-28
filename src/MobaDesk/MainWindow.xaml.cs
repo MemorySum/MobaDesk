@@ -1739,12 +1739,6 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var feed = UpdateService.ResolveFeed(App.Settings.UpdateFeedUrl);
-        if (string.IsNullOrWhiteSpace(feed))
-        {
-            return;
-        }
-
         if (DateTimeOffset.TryParse(App.Settings.LastUpdateCheckUtc, out var lastCheck) &&
             DateTimeOffset.UtcNow - lastCheck.ToUniversalTime() < TimeSpan.FromHours(24))
         {
@@ -1759,7 +1753,7 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
-            var update = await UpdateService.CheckAsync(feed, CancellationToken.None);
+            var update = await UpdateService.CheckLatestReleaseAsync(CancellationToken.None);
             Log.Info($"Update check: current={UpdateService.CurrentVersion} latest={update.Manifest.Version} newer={update.IsNewer}");
             App.Settings.LastUpdateCheckUtc = DateTimeOffset.UtcNow.ToString("O");
             App.Settings.Save();

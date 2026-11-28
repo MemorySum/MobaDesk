@@ -24,8 +24,6 @@ public sealed class AppSettings
     public string Language { get; set; } = "zh-CN";
     public bool CopyOnSelect { get; set; }
 
-    /// <summary>version.json feed URL or local path; empty uses MOBADESK_UPDATE_FEED / updates\version.json.</summary>
-    public string UpdateFeedUrl { get; set; } = "";
     public bool CheckUpdatesOnStartup { get; set; } = true;
     /// <summary>ISO-8601 UTC timestamp of the last successful startup update check.</summary>
     public string LastUpdateCheckUtc { get; set; } = "";
@@ -91,7 +89,6 @@ public sealed class AppSettings
             Language = Language.StartsWith("en", StringComparison.OrdinalIgnoreCase) ? "en-US" : "zh-CN";
         }
 
-        UpdateFeedUrl = (UpdateFeedUrl ?? "").Trim();
         LastUpdateCheckUtc = LastUpdateCheckUtc ?? "";
     }
 }

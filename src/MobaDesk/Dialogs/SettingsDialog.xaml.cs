@@ -49,7 +49,6 @@ public sealed partial class SettingsDialog : ContentDialog
         CopyOnSelectCheck.IsChecked = current.CopyOnSelect;
 
         AboutVersionText.Text = $"v{UpdateService.CurrentVersion}";
-        UpdateFeedBox.Text = current.UpdateFeedUrl;
         AutoUpdateCheck.IsChecked = current.CheckUpdatesOnStartup;
 
         ThemeCombo.SelectedIndex = current.Theme switch
@@ -297,20 +296,12 @@ public sealed partial class SettingsDialog : ContentDialog
         Material = SelectedMaterial(),
         InterfaceMode = SelectedInterfaceMode(),
         Language = SelectedLanguage(),
-        UpdateFeedUrl = (UpdateFeedBox.Text ?? "").Trim(),
         CheckUpdatesOnStartup = AutoUpdateCheck.IsChecked == true,
         LastUpdateCheckUtc = _original.LastUpdateCheckUtc
     };
 
     private async void OnCheckUpdateClick(object sender, RoutedEventArgs e)
     {
-        var feed = UpdateService.ResolveFeed(UpdateFeedBox.Text);
-        if (string.IsNullOrWhiteSpace(feed))
-        {
-            UpdateStatusText.Text = Localization.T("Update.FeedRequired");
-            return;
-        }
-
         _availableUpdate = null;
         InstallUpdateButton.Visibility = Visibility.Collapsed;
         CheckUpdateButton.IsEnabled = false;
@@ -318,7 +309,7 @@ public sealed partial class SettingsDialog : ContentDialog
 
         try
         {
-            var result = await UpdateService.CheckAsync(feed, CancellationToken.None);
+            var result = await UpdateService.CheckLatestReleaseAsync(CancellationToken.None);
             if (result.IsNewer)
             {
                 _availableUpdate = result;

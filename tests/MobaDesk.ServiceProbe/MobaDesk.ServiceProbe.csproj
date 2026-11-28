@@ -29,6 +29,7 @@
     <Compile Include="..\..\src\MobaDesk\Services\JsonStore.cs" Link="Shared\JsonStore.cs" />
     <Compile Include="..\..\src\MobaDesk\Models\MobaDeskJsonContext.cs" Link="Shared\MobaDeskJsonContext.cs" />
     <Compile Include="..\..\src\MobaDesk\Models\UpdateManifest.cs" Link="Shared\UpdateManifest.cs" />
+    <Compile Include="..\..\src\MobaDesk\Models\GitHubRelease.cs" Link="Shared\GitHubRelease.cs" />
     <Compile Include="..\..\src\MobaDesk\Models\RemoteEntry.cs" Link="Shared\RemoteEntry.cs" />
     <Compile Include="..\..\src\MobaDesk\Models\ServerMetrics.cs" Link="Shared\ServerMetrics.cs" />
     <Compile Include="..\..\src\MobaDesk\Services\AppPaths.cs" Link="Shared\AppPaths.cs" />

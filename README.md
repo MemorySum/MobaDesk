@@ -53,7 +53,7 @@ dotnet build .\src\MobaDesk\MobaDesk.csproj -c Debug
 | ClickOnce | `.\build-clickonce.ps1` | `publish\clickonce\`（`setup.exe` 引导） |
 | 便携版 | `.\publish.ps1` 后压缩目录 | 解压即用，配合 `MOBADESK_DATA_DIR` 多实例 |
 
-自动更新（仅 Inno Setup 安装包）：`version.json` 记录版本 / 下载地址 / SHA-256，比对版本 → 下载 → 校验 → `/VERYSILENT` 静默升级。`url` 可相对 `version.json` 所在目录。
+自动更新（仅 Inno Setup 安装包）：应用自动检测 GitHub 最新 Release，读取其中的 `version.json`（版本 / 下载地址 / SHA-256），比对版本 → 下载 → 校验 → `/VERYSILENT` 静默升级。`url` 可相对 `version.json` 所在目录。
 
 ## GitHub Actions 自动发布
 
@@ -66,7 +66,7 @@ git tag v1.0.1
 git push origin v1.0.1
 ```
 
-产物：`MobaDesk-Setup-<ver>.exe`、`MobaDesk-Portable-<ver>-win-x64.zip`、`MobaDesk-ClickOnce-<ver>.zip`、`version.json`。更新源固定为 `https://github.com/<owner>/<repo>/releases/latest/download/version.json`。
+产物：`MobaDesk-Setup-<ver>.exe`、`MobaDesk-Portable-<ver>-win-x64.zip`、`MobaDesk-ClickOnce-<ver>.zip`、`version.json`。更新检测固定为 `https://api.github.com/repos/MemorySum/MobaDesk/releases/latest`，读取该 Release 的 `version.json` 资产确定下载地址与 SHA-256。
 
 ## 使用要点
 

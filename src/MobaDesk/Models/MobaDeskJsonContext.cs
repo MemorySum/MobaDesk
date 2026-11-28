@@ -12,6 +12,7 @@ namespace MobaDesk.Models;
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(UpdateManifest))]
+[JsonSerializable(typeof(GitHubRelease))]
 [JsonSerializable(typeof(List<ConnectionProfile>))]
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]

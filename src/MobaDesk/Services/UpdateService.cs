@@ -17,6 +17,10 @@ public static class UpdateService
 {
     private const string UserAgentName = "MobaDesk-Updater";
     private const string DefaultManifestName = "version.json";
+    private const string RepositoryOwner = "MemorySum";
+    private const string RepositoryName = "MobaDesk";
+    private const string LatestReleaseUrl =
+        $"https://api.github.com/repos/{RepositoryOwner}/{RepositoryName}/releases/latest";
 
     public static string CurrentVersion
     {
@@ -35,20 +39,37 @@ public static class UpdateService
     }
 
     /// <summary>
-    /// Feed precedence: MOBADESK_UPDATE_FEED, the configured URL, then an
-    /// "updates/version.json" file next to the executable.
+    /// Detects the latest published GitHub release and compares it against the running
+    /// version. The release's version.json asset is authoritative for the download URL and
+    /// SHA-256; the release body becomes the update notes when the manifest has none.
     /// </summary>
-    public static string ResolveFeed(string? configured)
+    public static async Task<UpdateCheckResult> CheckLatestReleaseAsync(CancellationToken cancellationToken)
     {
-        var environment = Environment.GetEnvironmentVariable("MOBADESK_UPDATE_FEED");
-        var feed = !string.IsNullOrWhiteSpace(environment) ? environment : configured;
-        if (!string.IsNullOrWhiteSpace(feed))
+        var release = await ReadLatestReleaseAsync(cancellationToken).ConfigureAwait(false);
+        var manifestAsset = release.Assets?.FirstOrDefault(a =>
+            string.Equals(a.Name, DefaultManifestName, StringComparison.OrdinalIgnoreCase));
+        if (manifestAsset == null || string.IsNullOrWhiteSpace(manifestAsset.BrowserDownloadUrl))
         {
-            return feed.Trim();
+            throw new InvalidOperationException("GitHub 最新发布缺少 version.json 资产。");
         }
 
-        var local = Path.Combine(AppContext.BaseDirectory, "updates", DefaultManifestName);
-        return File.Exists(local) ? local : "";
+        var result = await CheckAsync(manifestAsset.BrowserDownloadUrl, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(result.Manifest.Notes))
+        {
+            result.Manifest.Notes = (release.Body ?? "").Trim();
+        }
+
+        return result;
+    }
+
+    private static async Task<GitHubRelease> ReadLatestReleaseAsync(CancellationToken cancellationToken)
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"{UserAgentName}/{CurrentVersion}");
+        client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        var json = await client.GetStringAsync(LatestReleaseUrl, cancellationToken).ConfigureAwait(false);
+        return JsonSerializer.Deserialize(json, MobaDeskJsonContext.Default.GitHubRelease)
+            ?? throw new InvalidOperationException("无法解析 GitHub 最新发布信息。");
     }
 
     public static async Task<UpdateCheckResult> CheckAsync(string feed, CancellationToken cancellationToken)
