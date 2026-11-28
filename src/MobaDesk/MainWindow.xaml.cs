@@ -200,6 +200,7 @@ public sealed partial class MainWindow : Window
             {
                 Loc.ApplyTree(tab.Content as DependencyObject);
                 ApplyTabToolTips(tab);
+                ApplyTabFlyoutText(tab);
 
                 if (tab.Content is ConcurrentTerminalView)
                 {
@@ -398,6 +399,7 @@ public sealed partial class MainWindow : Window
             VerticalContentAlignment = VerticalAlignment.Stretch
         };
 
+        AttachTabContextMenu(tab);
         SessionTabs.TabItems.Add(tab);
         tab.Loaded += (_, _) => ApplyTabToolTips(tab);
         SessionTabs.SelectedItem = tab;
@@ -419,6 +421,7 @@ public sealed partial class MainWindow : Window
             VerticalContentAlignment = VerticalAlignment.Stretch
         };
 
+        AttachTabContextMenu(tab);
         ToolTipService.SetToolTip(tab, string.Join("\n", profiles.Select(profile => profile.Name)));
 
         SessionTabs.TabItems.Add(tab);
@@ -442,6 +445,7 @@ public sealed partial class MainWindow : Window
     {
         var terminal = new SshTerminalView(profile, credentials);
         terminal.UserInput += OnTerminalUserInput;
+        terminal.UserPasted += OnTerminalUserPasted;
         terminal.BroadcastMembershipChanged += _ => UpdateBroadcastState();
         return terminal;
     }
@@ -480,6 +484,7 @@ public sealed partial class MainWindow : Window
             VerticalContentAlignment = VerticalAlignment.Stretch
         };
 
+        AttachTabContextMenu(tab);
         ToolTipService.SetToolTip(tab, entry.FullPath);
 
         SessionTabs.TabItems.Add(tab);
@@ -776,6 +781,156 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>Enables the tab menu for right-clicks on the tab header only, not on its content.</summary>
+    private void AttachTabContextMenu(TabViewItem tab) =>
+        tab.ContextRequested += OnTabContextRequested;
+
+    private void OnTabContextRequested(UIElement sender, ContextRequestedEventArgs args)
+    {
+        if (sender is not TabViewItem tab)
+        {
+            return;
+        }
+
+        if (IsWithinContent(args.OriginalSource as DependencyObject, tab.Content as DependencyObject))
+        {
+            // Terminals, file browsers and editors each provide their own menus.
+            tab.ContextFlyout = null;
+            return;
+        }
+
+        tab.ContextFlyout = CreateTabContextFlyout(tab);
+    }
+
+    private static bool IsWithinContent(DependencyObject? source, DependencyObject? content)
+    {
+        if (content == null)
+        {
+            return false;
+        }
+
+        for (var node = source; node != null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (ReferenceEquals(node, content))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Builds the right-click menu shown on a tab header.</summary>
+    private MenuFlyout CreateTabContextFlyout(TabViewItem tab)
+    {
+        var flyout = new MenuFlyout();
+        var closeCurrent = AddTabMenuItem(flyout, "Tab.CloseCurrent", "\uE711",
+            () => RequestCloseTabAsync(tab));
+        var closeOthers = AddTabMenuItem(flyout, "Tab.CloseOthers", "\uE8BB",
+            () => CloseTabsAsync(OtherTabs(tab)));
+        flyout.Items.Add(new MenuFlyoutSeparator());
+        var closeLeft = AddTabMenuItem(flyout, "Tab.CloseLeft", "\uE76B",
+            () => CloseTabsAsync(TabsBefore(tab)));
+        var closeRight = AddTabMenuItem(flyout, "Tab.CloseRight", "\uE76C",
+            () => CloseTabsAsync(TabsAfter(tab)));
+        flyout.Items.Add(new MenuFlyoutSeparator());
+        AddTabMenuItem(flyout, "Tab.CloseAll", "\uE8BB", () => CloseTabsAsync(AllTabs()));
+
+        flyout.Opening += (_, _) =>
+        {
+            var index = SessionTabs.TabItems.IndexOf(tab);
+            var count = SessionTabs.TabItems.Count;
+            closeCurrent.IsEnabled = index >= 0;
+            closeOthers.IsEnabled = count > 1;
+            closeLeft.IsEnabled = index > 0;
+            closeRight.IsEnabled = index >= 0 && index < count - 1;
+        };
+
+        return flyout;
+    }
+
+    private static MenuFlyoutItem AddTabMenuItem(MenuFlyout flyout, string key, string glyph, Func<Task> action)
+    {
+        var item = new MenuFlyoutItem { Icon = new FontIcon { Glyph = glyph } };
+        Loc.SetKey(item, key);
+        item.Click += async (_, _) => await action();
+        flyout.Items.Add(item);
+        return item;
+    }
+
+    /// <summary>Re-applies localized text to an open tab's context menu after a language switch.</summary>
+    private static void ApplyTabFlyoutText(TabViewItem tab)
+    {
+        if (tab.ContextFlyout is not MenuFlyout flyout)
+        {
+            return;
+        }
+
+        foreach (var entry in flyout.Items)
+        {
+            if (entry is MenuFlyoutItem item && Loc.GetKey(item) is { Length: > 0 } key)
+            {
+                item.Text = Localization.T(key);
+            }
+        }
+    }
+
+    private IEnumerable<TabViewItem> AllTabs() =>
+        SessionTabs.TabItems.OfType<TabViewItem>().ToList();
+
+    private IEnumerable<TabViewItem> OtherTabs(TabViewItem tab) =>
+        SessionTabs.TabItems.OfType<TabViewItem>()
+            .Where(item => !ReferenceEquals(item, tab))
+            .ToList();
+
+    private IEnumerable<TabViewItem> TabsBefore(TabViewItem tab)
+    {
+        var result = new List<TabViewItem>();
+        foreach (var item in SessionTabs.TabItems)
+        {
+            if (ReferenceEquals(item, tab))
+            {
+                break;
+            }
+
+            if (item is TabViewItem other)
+            {
+                result.Add(other);
+            }
+        }
+
+        return result;
+    }
+
+    private IEnumerable<TabViewItem> TabsAfter(TabViewItem tab)
+    {
+        var result = new List<TabViewItem>();
+        var found = false;
+        foreach (var item in SessionTabs.TabItems)
+        {
+            if (!found)
+            {
+                found = ReferenceEquals(item, tab);
+                continue;
+            }
+
+            if (item is TabViewItem other)
+            {
+                result.Add(other);
+            }
+        }
+
+        return result;
+    }
+
+    private async Task CloseTabsAsync(IEnumerable<TabViewItem> tabs)
+    {
+        foreach (var tab in tabs.ToList())
+        {
+            await RequestCloseTabAsync(tab);
+        }
+    }
+
     private async Task CloseTabAsync(TabViewItem tab)
     {
         SessionTabs.TabItems.Remove(tab);
@@ -924,6 +1079,28 @@ public sealed partial class MainWindow : Window
             if (!ReferenceEquals(view, source) && view.IsBroadcastMember)
             {
                 view.WriteBroadcast(data);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mirrors a paste as text, not bytes: each session wraps it in bracketed-paste markers
+    /// only when its own remote application asked for them, so a peer without support does
+    /// not receive marker escape codes as literal input.
+    /// </summary>
+    private async void OnTerminalUserPasted(SshTerminalView source, string text)
+    {
+        if (!source.IsBroadcastMember)
+        {
+            return;
+        }
+
+        var targets = _broadcastOn ? TerminalViews() : ConcurrentSiblings(source);
+        foreach (var view in targets)
+        {
+            if (!ReferenceEquals(view, source) && view.IsBroadcastMember)
+            {
+                await view.WritePastedTextAsync(text);
             }
         }
     }

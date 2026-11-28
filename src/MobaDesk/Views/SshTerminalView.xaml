@@ -71,7 +71,7 @@
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutItem x:Name="PasteMenuItem" loc:Loc.Key="Terminal.Paste"
-                                        Click="OnPasteMenuItemClick" KeyboardAcceleratorTextOverride="Ctrl+Shift+V">
+                                        Click="OnPasteMenuItemClick" KeyboardAcceleratorTextOverride="Ctrl+V">
                             <MenuFlyoutItem.Icon>
                                 <FontIcon Glyph="&#xE77F;" />
                             </MenuFlyoutItem.Icon>
@@ -120,14 +120,17 @@
                 <WebView2 x:Name="TerminalWeb" DefaultBackgroundColor="#0B0F16" />
 
                 <Border x:Name="BusyOverlay" Background="#E60B0F16">
+                    <!-- The overlay always sits on the fixed dark terminal, so its text uses
+                         fixed light colors instead of theme brushes (which turn black in light mode). -->
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12"
                                 MaxWidth="440" Padding="24">
-                        <ProgressRing x:Name="BusyRing" Width="34" Height="34" IsActive="True" />
+                        <ProgressRing x:Name="BusyRing" Width="34" Height="34" IsActive="True"
+                                      Foreground="{StaticResource BrandBlueBrush}" />
                         <TextBlock x:Name="BusyTitle" loc:Loc.Key="Ssh.BusyTitle" FontSize="15"
-                                   FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                   FontWeight="SemiBold" HorizontalAlignment="Center"
+                                   Foreground="#E8EEF7" />
                         <TextBlock x:Name="BusyDetail" Text="" FontSize="12" TextWrapping="Wrap"
-                                   TextAlignment="Center"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                   TextAlignment="Center" Foreground="#94A3B8" />
                         <Button x:Name="RetryButton" loc:Loc.Key="Common.Reconnect"
                                 Style="{StaticResource AccentButtonStyle}" Visibility="Collapsed"
                                 Click="OnReconnectClick" HorizontalAlignment="Center" />

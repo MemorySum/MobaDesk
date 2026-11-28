@@ -63,8 +63,59 @@
   </ItemGroup>
 
   <!-- dotnet publish omits the compiled WinUI resource index for unpackaged apps; copy it explicitly. -->
-  <Target Name="CopyPriToPublish" AfterTargets="Publish" Condition="Exists('$(TargetDir)$(AssemblyName).pri')">
+  <Target Name="CopyPriToPublish" AfterTargets="Publish"
+          Condition="'$(PublishProtocol)' != 'ClickOnce' and Exists('$(TargetDir)$(AssemblyName).pri')">
     <Copy SourceFiles="$(TargetDir)$(AssemblyName).pri" DestinationFolder="$(PublishDir)" />
+  </Target>
+
+  <!--
+    For unpackaged WinUI apps Windows App SDK embeds its reg-free WinRT activatable-class
+    manifest into the final $(TargetPath) apphost, not into the intermediate apphost.exe that
+    ClickOnce's launcher uses by default. Without it the installed app fails at startup with
+    0x80040154 (REGDB_E_CLASSNOTREG) in Microsoft.UI.Xaml.dll. Point ClickOnce at the final exe.
+  -->
+  <Target Name="UseFinalAppHostForClickOnce" BeforeTargets="_DeploymentGenerateLauncher"
+          Condition="'$(PublishProtocol)' == 'ClickOnce'">
+    <PropertyGroup>
+      <_ClickOnceAppHostSize>0</_ClickOnceAppHostSize>
+      <_ClickOnceAppHostSize Condition="Exists('$(TargetDir)$(AssemblyName).exe')">$([System.IO.File]::ReadAllBytes('$(TargetDir)$(AssemblyName).exe').Length)</_ClickOnceAppHostSize>
+    </PropertyGroup>
+    <Error Condition="'$(_ClickOnceAppHostSize)' == '0'"
+           Text="ClickOnce publish needs a normal build first: run the Build target, then PublishOnly (see build-clickonce.ps1)." />
+    <Error Condition="'$(_ClickOnceAppHostSize)' != '0' and '$(_ClickOnceAppHostSize)' &lt; '200000'"
+           Text="ClickOnce publish: '$(TargetDir)$(AssemblyName).exe' has no embedded Windows App SDK manifest. Build without GenerateManifests/GenerateClickOnceManifests first, then run PublishOnly (see build-clickonce.ps1)." />
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).exe" DestinationFiles="$(AppHostIntermediatePath)" />
+  </Target>
+
+  <!--
+    ClickOnce generates its file list from ContentWithTargetPath during
+    _DeploymentComputeClickOnceManifestInfo, which runs before the AfterTargets=Publish copy above.
+    Windows App SDK registers its .pri resource indexes, WinRT metadata (.winmd), Microsoft.UI.Xaml
+    assets and the WinUI control strings (.mui) through ResolvedFileToPublish only, so ClickOnce
+    would otherwise omit them and the installed app would crash while loading resources
+    (0xC000027B / 0x80073B01). Add them before the ClickOnce manifest is computed.
+  -->
+  <Target Name="AddWinUiResourcesToClickOnceManifest" BeforeTargets="_DeploymentComputeClickOnceManifestInfo"
+          Condition="'$(PublishProtocol)' == 'ClickOnce'">
+    <ItemGroup>
+      <_ClickOnceWinUiFiles Include="$(TargetDir)*.pri" />
+      <_ClickOnceWinUiFiles Include="$(TargetDir)*.winmd" />
+      <_ClickOnceWinUiFiles Include="$(TargetDir)WindowsAppRuntime.png" />
+      <_ClickOnceWinUiFiles Include="$(TargetDir)Microsoft.UI.Xaml\Assets\**\*" />
+      <_ClickOnceWinUiFiles Include="$(TargetDir)en-us\*.mui" />
+      <_ClickOnceWinUiFiles Include="$(TargetDir)zh-CN\*.mui" />
+    </ItemGroup>
+
+    <!-- AssignTargetPath keeps the path relative to the build output (en-us\x.mui, *.winmd, ...). -->
+    <AssignTargetPath Files="@(_ClickOnceWinUiFiles)" RootFolder="$(TargetDir)">
+      <Output TaskParameter="AssignedFiles" ItemName="_ClickOnceWinUiFilesWithTargetPath" />
+    </AssignTargetPath>
+
+    <ItemGroup>
+      <ContentWithTargetPath Include="@(_ClickOnceWinUiFilesWithTargetPath)">
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ContentWithTargetPath>
+    </ItemGroup>
   </Target>
 
   <!--

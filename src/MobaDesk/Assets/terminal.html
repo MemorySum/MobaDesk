@@ -135,6 +135,9 @@
                         return false;
                     }
                     if (event.code === 'KeyV') {
+                        // preventDefault suppresses WebView2's native paste, which would
+                        // otherwise deliver the clipboard a second time via xterm's paste event.
+                        event.preventDefault();
                         post({ type: 'paste' });
                         return false;
                     }
@@ -146,6 +149,13 @@
                         post({ type: 'clear' });
                         return false;
                     }
+                }
+
+                // Plain Ctrl+V pastes the system clipboard into the session.
+                if (event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'KeyV') {
+                    event.preventDefault();
+                    post({ type: 'paste' });
+                    return false;
                 }
 
                 return true;
@@ -309,6 +319,9 @@
                 },
                 getSelection: function () {
                     return term.getSelection();
+                },
+                getBracketedPasteMode: function () {
+                    return !!(term.modes && term.modes.bracketedPasteMode);
                 },
                 findNext: function (query, backwards) {
                     return findNext(query, !!backwards);

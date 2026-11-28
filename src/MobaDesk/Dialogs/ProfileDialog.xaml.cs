@@ -1,8 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.Storage.Pickers;
 using MobaDesk.Models;
 using MobaDesk.Services;
-using Windows.Storage.Pickers;
 
 namespace MobaDesk.Dialogs;
 
@@ -220,9 +220,7 @@ public sealed partial class ProfileDialog : ContentDialog
     {
         try
         {
-            var picker = new FileOpenPicker();
-            WinRT.Interop.InitializeWithWindow.Initialize(picker,
-                WinRT.Interop.WindowNative.GetWindowHandle(App.Shell));
+            var picker = new FileOpenPicker(App.Shell!.AppWindow.Id);
             picker.FileTypeFilter.Add("*");
             var file = await picker.PickSingleFileAsync();
             if (file != null)

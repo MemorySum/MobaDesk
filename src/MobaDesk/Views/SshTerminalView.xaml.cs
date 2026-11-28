@@ -92,6 +92,9 @@ public sealed partial class SshTerminalView : IAsyncDisposable
     /// <summary>Raised for every keystroke block typed into this terminal.</summary>
     public event Action<SshTerminalView, byte[]>? UserInput;
 
+    /// <summary>Raised with the text of a paste so peers can mirror it through their own paste path.</summary>
+    public event Action<SshTerminalView, string>? UserPasted;
+
     /// <summary>Raised when the "in broadcast" checkbox changes.</summary>
     public event Action<SshTerminalView>? BroadcastMembershipChanged;
 
@@ -120,6 +123,77 @@ public sealed partial class SshTerminalView : IAsyncDisposable
         {
             Log.Warn($"Broadcast write failed for {_profile.Name}: {ex.Message}");
         }
+    }
+
+    /// <summary>Sends pasted text to the remote shell, as a bracketed paste when it asked for one.</summary>
+    public async Task WritePastedTextAsync(string text)
+    {
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            var bracketedPaste = await IsBracketedPasteActiveAsync();
+            _session.Write(Encoding.UTF8.GetBytes(BuildPastePayload(text, bracketedPaste)));
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Paste write failed for {_profile.Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Queries the terminal emulator (xterm.js) for its parsed bracketed-paste mode, instead of
+    /// scanning the raw SSH output stream, which cannot tell DECSET 2004 apart from echoed input
+    /// or program output.
+    /// </summary>
+    private async Task<bool> IsBracketedPasteActiveAsync()
+    {
+        if (!_webReady || TerminalWeb.CoreWebView2 == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var json = await TerminalWeb.CoreWebView2.ExecuteScriptAsync(
+                "window.term.getBracketedPasteMode()");
+            return json == "true";
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Apps that support bracketed paste (bash 5.1+, vim, ...) announce DECSET 2004 and expect
+    /// the text to be wrapped, so every line break is inserted into the line editor instead of
+    /// being read as an Enter that runs each pasted line as its own command. The envelope is
+    /// sanitized so a clipboard containing ESC[201~ cannot close it early and replay the rest
+    /// of the paste as live keystrokes.
+    /// </summary>
+    private static string BuildPastePayload(string text, bool bracketedPaste)
+    {
+        if (!bracketedPaste)
+        {
+            return text;
+        }
+
+        var sanitized = new StringBuilder(text.Length);
+        foreach (var ch in text)
+        {
+            if (ch == '\u001b' || (ch < ' ' && ch != '\t' && ch != '\n' && ch != '\r'))
+            {
+                continue;
+            }
+
+            sanitized.Append(ch);
+        }
+
+        return "\u001b[200~" + sanitized.Replace('\r', '\n') + "\u001b[201~";
     }
 
     /// <summary>Sends one or more command lines to the remote shell.</summary>
@@ -774,9 +848,13 @@ public sealed partial class SshTerminalView : IAsyncDisposable
         var text = await ReadClipboardTextAsync();
         if (!string.IsNullOrEmpty(text))
         {
-            var bytes = Encoding.UTF8.GetBytes(text);
-            _session.Write(bytes);
-            UserInput?.Invoke(this, bytes);
+            // The shell reads Enter as CR. Clipboard text carries Windows line endings, and
+            // forwarding "\r\n" verbatim makes readline see two Enters per line: the first
+            // ends a "\" continuation, the second runs the partial command, so a pasted
+            // multi-line command is split and executed line by line.
+            var normalized = text.Replace("\r\n", "\r").Replace('\n', '\r');
+            await WritePastedTextAsync(normalized);
+            UserPasted?.Invoke(this, normalized);
         }
 
         FocusTerminal();

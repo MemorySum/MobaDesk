@@ -10,9 +10,9 @@ permissions:
   contents: write
 
 jobs:
-  installer:
+  release:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -28,20 +28,6 @@ jobs:
         run: |
           git log -1 --oneline
           Write-Host "ref=$env:GITHUB_REF sha=$env:GITHUB_SHA"
-
-      - name: Install Inno Setup 6
-        shell: pwsh
-        run: |
-          $url = 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_4/innosetup-6.7.4.exe'
-          $installer = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.4.exe'
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          $signature = Get-AuthenticodeSignature -FilePath $installer
-          if ($signature.Status -ne 'Valid') {
-            throw "Inno Setup signature check failed: $($signature.Status)"
-          }
-          Start-Process -FilePath $installer -Wait -ArgumentList @(
-            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/NOICONS'
-          )
 
       - name: Resolve version
         id: version
@@ -62,20 +48,72 @@ jobs:
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Write-Host "MobaDesk version: $version"
 
+      # One self-contained publish feeds both the portable ZIP and the Inno Setup payload.
+      - name: Publish self-contained payload
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE\publish.ps1"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build portable ZIP
+        shell: pwsh
+        run: |
+          $ver = '${{ steps.version.outputs.version }}'
+          $src = Join-Path $env:GITHUB_WORKSPACE 'publish\win-x64'
+          $out = Join-Path $env:GITHUB_WORKSPACE 'installer\output'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          $zip = Join-Path $out "MobaDesk-Portable-$ver-win-x64.zip"
+          if (Test-Path $zip) { Remove-Item $zip }
+          Compress-Archive -Path (Join-Path $src '*') -DestinationPath $zip -CompressionLevel Optimal
+          Write-Host "Portable ZIP: $zip ($([Math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
+
+      - name: Install Inno Setup 6
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_4/innosetup-6.7.4.exe'
+          $installer = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.4.exe'
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $signature = Get-AuthenticodeSignature -FilePath $installer
+          if ($signature.Status -ne 'Valid') {
+            throw "Inno Setup signature check failed: $($signature.Status)"
+          }
+          Start-Process -FilePath $installer -Wait -ArgumentList @(
+            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/NOICONS'
+          )
+
       - name: Build installer
         shell: pwsh
         run: |
-          $script = Join-Path $env:GITHUB_WORKSPACE 'installer\build-installer.ps1'
-          if (-not (Test-Path $script)) { throw "Cannot find $script" }
-          & "$script" -Version '${{ steps.version.outputs.version }}'
+          & "$env:GITHUB_WORKSPACE\installer\build-installer.ps1" -SkipPublish -Version '${{ steps.version.outputs.version }}'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # ClickOnce needs Visual Studio MSBuild (GenerateBootstrapper), which windows-latest provides.
+      - name: Build ClickOnce package
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE\build-clickonce.ps1" -Configuration Release -Platform x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package ClickOnce ZIP
+        shell: pwsh
+        run: |
+          $ver = '${{ steps.version.outputs.version }}'
+          $src = Join-Path $env:GITHUB_WORKSPACE 'publish\clickonce'
+          $out = Join-Path $env:GITHUB_WORKSPACE 'installer\output'
+          $zip = Join-Path $out "MobaDesk-ClickOnce-$ver.zip"
+          if (Test-Path $zip) { Remove-Item $zip }
+          Compress-Archive -Path (Join-Path $src '*') -DestinationPath $zip -CompressionLevel Optimal
+          Write-Host "ClickOnce ZIP: $zip ($([Math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MobaDesk-Setup-${{ steps.version.outputs.version }}
+          name: MobaDesk-${{ steps.version.outputs.version }}
           path: |
             installer/output/MobaDesk-Setup-*.exe
             installer/output/version.json
+            installer/output/MobaDesk-Portable-*.zip
+            installer/output/MobaDesk-ClickOnce-*.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -85,10 +123,12 @@ jobs:
           files: |
             installer/output/MobaDesk-Setup-*.exe
             installer/output/version.json
+            installer/output/MobaDesk-Portable-*.zip
+            installer/output/MobaDesk-ClickOnce-*.zip
           generate_release_notes: true
           fail_on_unmatched_files: true
           body: |
-            MobaDesk ${{ steps.version.outputs.version }} installer and update manifest.
+            MobaDesk ${{ steps.version.outputs.version }} — Inno Setup installer, portable ZIP and ClickOnce package.
 
             Update feed:
             `https://github.com/${{ github.repository }}/releases/latest/download/version.json`

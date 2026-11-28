@@ -6,8 +6,8 @@ using MobaDesk.Ui;
 using MobaDesk.Models;
 using MobaDesk.Services;
 using MobaDesk.Services.FileSystems;
+using Microsoft.Windows.Storage.Pickers;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI;
 
@@ -232,9 +232,10 @@ public sealed partial class FileBrowserView : UserControl, IAsyncDisposable
 
         try
         {
-            var picker = new FileOpenPicker();
-            WinRT.Interop.InitializeWithWindow.Initialize(picker,
-                WinRT.Interop.WindowNative.GetWindowHandle(App.Shell));
+            // Windows App SDK pickers take the owning WindowId directly, so no
+            // InitializeWithWindow interop is needed (which fails with
+            // "Specified cast is not valid" on the legacy UWP picker in WinAppSDK 1.8).
+            var picker = new FileOpenPicker(App.Shell!.AppWindow.Id);
             picker.FileTypeFilter.Add("*");
             var files = await picker.PickMultipleFilesAsync();
             if (files == null || files.Count == 0)
@@ -248,11 +249,12 @@ public sealed partial class FileBrowserView : UserControl, IAsyncDisposable
             foreach (var file in files)
             {
                 index++;
-                var remotePath = RemotePath.Combine(targetDirectory, file.Name);
+                var fileName = Path.GetFileName(file.Path);
+                var remotePath = RemotePath.Combine(targetDirectory, fileName);
                 var progress = new Progress<double>(value =>
                 {
                     TransferProgress.Value = value;
-                    ProgressText.Text = Localization.T("File.Uploading", file.Name, index, files.Count, value);
+                    ProgressText.Text = Localization.T("File.Uploading", fileName, index, files.Count, value);
                 });
                 await _fileSystem.UploadAsync(file.Path, remotePath, progress, _cts.Token);
             }
@@ -289,10 +291,7 @@ public sealed partial class FileBrowserView : UserControl, IAsyncDisposable
 
         try
         {
-            var picker = new FolderPicker();
-            WinRT.Interop.InitializeWithWindow.Initialize(picker,
-                WinRT.Interop.WindowNative.GetWindowHandle(App.Shell));
-            picker.FileTypeFilter.Add("*");
+            var picker = new FolderPicker(App.Shell!.AppWindow.Id);
             var folder = await picker.PickSingleFolderAsync();
             if (folder == null)
             {
